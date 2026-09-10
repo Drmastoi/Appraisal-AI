@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AppraisalPortal UK — medical appraisal with integrated AI & CPD generation
 
-## Getting Started
+A full-stack portal for the annual appraisal of UK doctors, mapping the **Medical Appraisal Guide (MAG 2022)** model form, with **integrated 360° feedback**, **yearly PDP carry-forward**, **Responsible Officer outputs**, and a provider-agnostic **AI layer** for CPD reflection drafting, PDP suggestion and appraisal summaries.
 
-First, run the development server:
+## Why this is different
+
+| Platform | Their model | What we do |
+|---|---|---|
+| FourteenFish | Most-used GP toolkit; editable after submission | **Lock on sign-off** with version history and an append-only audit log |
+| Agilio Clarity | Locks on submit; org dashboards; AI bolt-on | **AI native to the workflow** — approval-gated, logged, mock/UK-Azure swappable |
+| Improval | Optional AI tools | AI drafts are always marked, approved and auditable |
+| L2P / GP Tools / SOAR / MARS | Legacy or national systems | Three-role workflow + RO compliance view in one product |
+
+## Roles & capabilities
+
+- **Doctor** — complete the MAG form (autosaving sections), log CPD (internal/external with reflections + AI drafting), QI/audit/teaching/CBDs, declare significant events & complaints, run anonymous 360° colleague (MSF) and patient feedback cycles with single-use token links, review last year's PDP, draft the new PDP (with AI suggestions), attach evidence, submit to the appraiser.
+- **Appraiser** — review submissions, comment per section (with resolve/reopen), make tracked edits (immutable version history), complete the appraiser's summary, generate an AI pre-appraisal summary and feedback-theme draft, **e-sign off** (locks the appraisal), export the MAG PDF.
+- **Admin** — approve accounts, assign appraisers, create appraisals, compliance dashboard (per-doctor status, RO recommendations, GMC submission tracking), export the RO bundle (signed appraisal JSON + PDF) for the Responsible Officer, browse the audit log.
+
+## Yearly PDP flow
+
+Sign-off marks the PDP *agreed* → a new next-year appraisal is seeded automatically with agreed objectives carried forward as `CARRIED_FORWARD` → next year's appraisal opens with the review prompts already populated.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env
+npx prisma db push
+npm run db:seed
+npm run dev            # http://localhost:4321
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Demo accounts: `admin@portal.nhs.uk / Admin123!` · `appraiser@portal.nhs.uk / Appraiser123!` · `doctor@portal.nhs.uk / Doctor123!`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The seed also creates the doctor's current-year appraisal **already SUBMITTED** with realistic content (scope of work, CPD, QI, PDP, declarations) plus a **closed 360° colleague feedback cycle with 15 responses** — log in as the appraiser to review it immediately, or as the doctor to view the unblinded feedback report. Rerunning the seed is safe: it only promotes a DRAFT appraisal and only fills sections/entries/cycles that are empty.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quality gates
 
-## Learn More
+```bash
+npm run typecheck && npm run lint && npm test
+```
 
-To learn more about Next.js, take a look at the following resources:
+27 tests: auth/tokens, 360 feedback aggregation & thresholds, MAG submission gating, AI provider outputs, and a full **lifecycle E2E** (assign → complete → submit → feedback → review → sign-off → PDP carry-forward → PDF export).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## AI provider configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`AI_PROVIDER=mock` (default; deterministic, no data leaves the server) · `azure-openai` (set `AZURE_OPENAI_*`, use a **UK-region deployment**) · `openai`. Every interaction is stored (`AIInteraction`) with prompt metadata, response, provider, and a human approval record.
 
-## Deploy on Vercel
+## Docs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `docs/DEPLOYMENT.md` — local dev, UK-region production, backups, multi-instance notes
+- `docs/PRIVACY_NOTICE.md` — UK GDPR privacy notice
+- `docs/DPIA_CHECKLIST.md` — ICO-style DPIA working checklist incl. AI provider decision
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## v1 boundaries (next steps)
+
+- Direct **GMC Connect** API submission (v1 produces the RO bundle for manual upload)
+- Email delivery via NHS Notify / transactional SMTP (in-app notifications are live)
+- Object storage for attachments at scale (in-DB in v1), Redis-backed rate limiting for multi-instance
+- NHS smartcard / SSO integration

@@ -1,26 +1,198 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+  --color-nhs-blue: var(--nhs-blue);
+  --color-nhs-dark-blue: var(--nhs-dark-blue);
+  --color-nhs-bright-blue: var(--nhs-bright-blue);
+  --color-nhs-light-grey: var(--nhs-light-grey);
+  --color-nhs-warm-yellow: var(--nhs-warm-yellow);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  /* Layered, cool-tinted shadows for depth without muddiness */
+  --shadow-xs: 0 1px 2px 0 rgb(15 42 45 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(15 42 45 / 0.07), 0 1px 2px -1px rgb(15 42 45 / 0.04);
+  --shadow-md: 0 4px 14px -2px rgb(15 42 45 / 0.1), 0 2px 6px -2px rgb(15 42 45 / 0.05);
+  --shadow-lg: 0 16px 40px -8px rgb(15 42 45 / 0.16);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
+:root {
+  color-scheme: light;
+  /* NHS Identity — core palette */
+  --nhs-blue: #005eb8;
+  --nhs-dark-blue: #003087;
+  --nhs-bright-blue: #0072ce;
+  --nhs-light-blue: #41b6e6;
+  --nhs-aqua-blue: #00a9ce;
+  --nhs-black: #212b32;
+  --nhs-dark-grey: #4c6272;
+  --nhs-mid-grey: #768692;
+  --nhs-light-grey: #f0f4f5;
+  --nhs-border-grey: #d8dde0;
+  --nhs-warm-yellow: #ffb81c;
+  --nhs-yellow: #fae100;
+  --nhs-green: #009639;
+  --nhs-red: #da291c;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* NHS Frutiger stack — Frutiger W01 licensed; Arial is the sanctioned fallback */
+  font-family: "Frutiger W01", var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background-color: var(--nhs-light-grey);
+  color: var(--nhs-black);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--nhs-blue) 18%, transparent);
+}
+
+/* Visible, consistent keyboard focus */
+/* NHS focus: 3px NHS Yellow outer + 3px NHS Black inner — here simplified to accessible ring */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--nhs-yellow);
+  outline-offset: 0;
+  box-shadow: inset 0 0 0 2px var(--nhs-black);
+  border-radius: 0;
+}
+
+/* Slim, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nhs-border-grey) transparent;
+}
+
+@layer components {
+  /* Buttons — NHS: hard square, NHS Blue primary */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 bg-[var(--nhs-blue)] px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--nhs-dark-blue)] active:bg-[var(--nhs-dark-blue)] disabled:pointer-events-none disabled:opacity-50;
+    border-radius: 0;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 border bg-white px-5 py-2.5 text-[15px] font-semibold shadow-xs transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-50;
+    border-color: var(--nhs-blue);
+    color: var(--nhs-blue);
+    border-radius: 0;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-50;
+    color: var(--nhs-blue);
+    border-radius: 0;
+  }
+  .btn-danger-outline {
+    @apply inline-flex items-center justify-center gap-1.5 border bg-white px-3 py-1.5 text-xs font-medium transition-colors hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50;
+    border-color: var(--nhs-red);
+    color: var(--nhs-red);
+    border-radius: 0;
+  }
+
+  /* Small action chips (table rows, toolbars) — NHS square */
+  .chip-primary {
+    @apply inline-flex items-center justify-center gap-1 bg-[var(--nhs-blue)] px-2.5 py-1 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[var(--nhs-dark-blue)] disabled:pointer-events-none disabled:opacity-40;
+    border-radius: 0;
+  }
+  .chip-secondary {
+    @apply inline-flex items-center justify-center gap-1 border bg-white px-2.5 py-1 text-xs font-medium transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40;
+    border-color: var(--nhs-border-grey);
+    color: var(--nhs-dark-grey);
+    border-radius: 0;
+  }
+  .chip-danger {
+    @apply inline-flex items-center justify-center gap-1 border bg-white px-2.5 py-1 text-xs font-medium transition-colors hover:bg-red-50 disabled:pointer-events-none disabled:opacity-40;
+    border-color: var(--nhs-red);
+    color: var(--nhs-red);
+    border-radius: 0;
+  }
+  .chip-ai {
+    @apply inline-flex items-center justify-center gap-1 border bg-white px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40;
+    border-color: var(--nhs-blue);
+    background: #e8f1fc;
+    color: var(--nhs-dark-blue);
+    border-radius: 0;
+  }
+  .chip-dark {
+    @apply inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:pointer-events-none disabled:opacity-40;
+    background: var(--nhs-black);
+    border-radius: 0;
+  }
+  .chip-teal-outline {
+    @apply inline-flex items-center justify-center gap-1 border bg-white px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40;
+    border-color: var(--nhs-blue);
+    color: var(--nhs-blue);
+    border-radius: 0;
+  }
+  .chip-amber {
+    @apply inline-flex items-center justify-center gap-1 border bg-white px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-amber-50 disabled:pointer-events-none disabled:opacity-40;
+    border-color: var(--nhs-warm-yellow);
+    color: #7a4d00;
+    border-radius: 0;
+  }
+
+  /* Form fields — NHS: square, 2px focus, yellow outline handled globally */
+  .field {
+    @apply w-full border bg-white px-3 py-2 text-[16px] shadow-xs transition placeholder:text-slate-400 focus:outline-none;
+    border-color: var(--nhs-black);
+    color: var(--nhs-black);
+    border-radius: 0;
+    border-width: 2px;
+  }
+  .field:focus {
+    border-color: var(--nhs-black);
+    box-shadow:
+      inset 0 0 0 2px var(--nhs-black),
+      0 0 0 4px var(--nhs-yellow);
+  }
+  .label {
+    @apply mb-1 block text-[16px] font-semibold;
+    color: var(--nhs-black);
+  }
+
+  /* Surfaces — NHS cards are flat, subtle shadow */
+  .card {
+    @apply border bg-white shadow-sm;
+    border-color: var(--nhs-border-grey);
+    border-radius: 0;
+  }
+
+  /* NHS decorative */
+  .text-gradient {
+    color: var(--nhs-blue);
+  }
+  .dot-grid {
+    background-image: radial-gradient(rgb(0 94 184 / 0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .font-display {
+    font-family: var(--font-display), "Frutiger W01", Arial, sans-serif;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* NHS utilities */
+  .nhs-blue { color: var(--nhs-blue); }
+  .nhs-dark-blue { color: var(--nhs-dark-blue); }
+  .bg-nhs-blue { background-color: var(--nhs-blue); }
+  .bg-nhs-dark-blue { background-color: var(--nhs-dark-blue); }
+  .bg-nhs-light-grey { background-color: var(--nhs-light-grey); }
+  .border-nhs { border-color: var(--nhs-border-grey); }
 }

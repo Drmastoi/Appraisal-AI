@@ -1,0 +1,375 @@
+// UK Medical Appraisal Portal — data model
+// NOTE: SQLite is used for local development. The schema is written to be
+// portable: switch the provider below to "postgresql" for staging/production
+// (UK-region hosted). Enum-like fields are Strings validated with zod in the
+// application layer so the same schema runs on both providers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  role               String // DOCTOR | APPRAISER | ADMIN
+  gmcNumber          String?
+  designatedBody     String?
+  revalidationDueDate DateTime?
+  approved           Boolean   @default(false)
+  active             Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  sessions             Session[]
+  doctorAssignments    Assignment[] @relation("DoctorAssignments")
+  appraiserAssignments Assignment[] @relation("AppraiserAssignments")
+  appraisals           Appraisal[]  @relation("DoctorAppraisals")
+  appraisedBy          Appraisal[]  @relation("AppraiserAppraisals")
+  comments             AppraiserComment[]
+  signatures           Signature[]
+  attachments          Attachment[]
+  verifiedAttachments  Attachment[]       @relation("AttachmentVerifiedBy")
+  meetings         AppraisalMeeting[] @relation("MeetingCreatedBy")
+  auditLogs            AuditLog[]
+  aiInteractions       AIInteraction[]
+  notifications        Notification[]
+  roRecommendations    RORecommendation[] @relation("RoDoctor")
+  roRecommendationsMade RORecommendation[] @relation("RoMadeBy")
+}
+
+model Session {
+  id        String   @id @default(cuid()) // hashed session token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  doctorId    String
+  appraiserId String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  doctor      User     @relation("DoctorAssignments", fields: [doctorId], references: [id], onDelete: Cascade)
+  appraiser   User     @relation("AppraiserAssignments", fields: [appraiserId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, appraiserId])
+}
+
+model Appraisal {
+  id                  String    @id @default(cuid())
+  doctorId            String
+  appraiserId         String?
+  year                Int // appraisal year start, e.g. 2026 => 2026/27
+  status              String    @default("DRAFT") // DRAFT | SUBMITTED | IN_REVIEW | SIGNED_OFF
+  submittedAt         DateTime?
+  signedOffAt         DateTime?
+  appraisalMeetingDate DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  doctor              User      @relation("DoctorAppraisals", fields: [doctorId], references: [id], onDelete: Cascade)
+  appraiser           User?     @relation("AppraiserAppraisals", fields: [appraiserId], references: [id])
+
+  sections         AppraisalSection[]
+  cpdEntries       CPDEntry[]
+  qiEntries        QIEntry[]
+  significantEvents SignificantEvent[]
+  pdpObjectives    PDPObjective[]
+  feedbackCycles   FeedbackCycle[]
+  comments         AppraiserComment[]
+  signatures       Signature[]
+  attachments      Attachment[]
+  meetings         AppraisalMeeting[]
+  aiInteractions   AIInteraction[]
+
+  @@unique([doctorId, year])
+  @@index([appraiserId])
+}
+
+model AppraisalSection {
+  id          String   @id @default(cuid())
+  appraisalId String
+  sectionKey  String // MAG section key, e.g. "doctor_details", "scope_of_work"
+  data        String   @default("{}") // JSON-serialised section payload
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  versions SectionVersion[]
+
+  @@unique([appraisalId, sectionKey])
+}
+
+// Immutable history of section payloads (doctor submissions and appraiser edits)
+model SectionVersion {
+  id          String   @id @default(cuid())
+  sectionId   String
+  data        String
+  editedByRole String // DOCTOR | APPRAISER
+  editedById  String
+  note        String?
+  createdAt   DateTime @default(now())
+  section     AppraisalSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId])
+}
+
+model CPDEntry {
+  id               String   @id @default(cuid())
+  appraisalId      String
+  date             DateTime
+  title            String
+  activityType     String // INTERNAL | EXTERNAL
+  category         String? // e.g. course, conference, e-learning, teaching
+  provider         String?
+  points           Int      @default(0)
+  reflection       String?
+  learningNeeds    String?
+  impactOnPractice String?
+  aiAssisted       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  appraisal        Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  @@index([appraisalId])
+}
+
+model QIEntry {
+  id          String   @id @default(cuid())
+  appraisalId String
+  date        DateTime
+  title       String
+  entryType   String // AUDIT | QI_PROJECT | TEACHING_FEEDBACK | CBD | REFLECTION | OTHER
+  description String
+  outcome     String?
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  @@index([appraisalId])
+}
+
+model SignificantEvent {
+  id          String   @id @default(cuid())
+  appraisalId String
+  date        DateTime
+  title       String
+  eventType   String // SIGNIFICANT_EVENT | COMPLAINT | COMPLIMENT
+  description String
+  reflection  String?
+  outcome     String?
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  @@index([appraisalId])
+}
+
+model PDPObjective {
+  id                 String   @id @default(cuid())
+  appraisalId        String
+  source             String   @default("NEW") // CARRIED_FORWARD | NEW
+  previousObjectiveId String?
+  previousObjective  PDPObjective?  @relation("PDPCarryForward", fields: [previousObjectiveId], references: [id])
+  carriedForward     PDPObjective[] @relation("PDPCarryForward")
+  title              String
+  description        String?
+  status             String   @default("PROPOSED") // PROPOSED | AGREED | ACHIEVED | NOT_ACHIEVED | CARRIED_FORWARD
+  progressNote       String? // how achieved, or why not
+  priority           Int      @default(0)
+  // SMART framework — null for legacy rows / carried-forward without detail
+  smartSpecific      String?
+  smartMeasurable    String?
+  smartAchievable    String?
+  smartRelevant      String?
+  smartTimeBound     String?
+  deadline           DateTime?
+  createdAt          DateTime @default(now())
+  appraisal          Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  @@index([appraisalId])
+}
+
+model FeedbackCycle {
+  id           String    @id @default(cuid())
+  appraisalId  String
+  cycleType    String // COLLEAGUE | PATIENT
+  status       String    @default("OPEN") // OPEN | CLOSED | REPORTED
+  minResponses Int       @default(15)
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  appraisal    Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  invites   FeedbackInvite[]
+  responses FeedbackResponse[]
+
+  @@index([appraisalId])
+}
+
+model FeedbackInvite {
+  id          String    @id @default(cuid())
+  cycleId     String
+  token       String    @unique
+  recipientName String?
+  relationship  String? // e.g. clinical colleague, manager, patient
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  cycle       FeedbackCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  responses FeedbackResponse[]
+
+  @@index([cycleId])
+}
+
+model FeedbackResponse {
+  id          String   @id @default(cuid())
+  cycleId     String
+  inviteId    String?
+  ratings     String   @default("{}") // JSON: questionId -> 1..5
+  freeText    String   @default("[]") // JSON: array of free-text answers
+  submittedAt DateTime @default(now())
+  cycle       FeedbackCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  invite      FeedbackInvite?  @relation(fields: [inviteId], references: [id])
+
+  @@index([cycleId])
+}
+
+model AppraiserComment {
+  id          String   @id @default(cuid())
+  appraisalId String
+  sectionKey  String
+  authorId    String
+  parentId    String?
+  body        String
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
+
+  @@index([appraisalId, sectionKey])
+}
+
+model Signature {
+  id          String   @id @default(cuid())
+  appraisalId String
+  signerId    String
+  signerRole  String // DOCTOR | APPRAISER
+  statement   String
+  signedAt    DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+  signer      User     @relation(fields: [signerId], references: [id])
+
+  @@unique([appraisalId, signerRole])
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  appraisalId String
+  sectionKey  String?
+  filename    String
+  mimeType    String
+  size        Int
+  data        Bytes
+  uploadedById String
+  // Certificate metadata / document verification
+  issuer      String?
+  issuedAt    DateTime?
+  verified    Boolean   @default(false)
+  verifiedAt  DateTime?
+  verifiedById String?
+  verifiedBy  User?     @relation("AttachmentVerifiedBy", fields: [verifiedById], references: [id])
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([appraisalId])
+  @@index([verified])
+}
+
+model AppraisalMeeting {
+  id          String   @id @default(cuid())
+  appraisalId String
+  scheduledAt DateTime
+  location    String? // e.g. room or "MS Teams"
+  notes       String?
+  createdById String
+  createdAt   DateTime @default(now())
+  appraisal   Appraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("MeetingCreatedBy", fields: [createdById], references: [id])
+
+  @@index([appraisalId])
+  @@index([scheduledAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorRole  String?
+  action     String
+  entityType String
+  entityId   String?
+  meta       String? // JSON
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
+
+model AIInteraction {
+  id            String   @id @default(cuid())
+  userId        String
+  appraisalId   String?
+  kind          String // CPD_REFLECTION | PDP_SUGGESTION | APPRAISAL_SUMMARY | FEEDBACK_THEMES
+  provider      String
+  model         String?
+  promptMeta    String? // JSON summary of inputs (never raw patient data)
+  response      String
+  approved      Boolean  @default(false)
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  user          User       @relation(fields: [userId], references: [id])
+  appraisal     Appraisal? @relation(fields: [appraisalId], references: [id])
+
+  @@index([appraisalId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RORecommendation {
+  id            String   @id @default(cuid())
+  doctorId      String
+  madeById      String
+  appraisalYear Int
+  recommendation String // POSITIVE | DEFERRED | NEGATIVE
+  note          String?
+  submittedToGmc Boolean @default(false)
+  gmcConnectRef String?
+  createdAt     DateTime @default(now())
+  doctor        User @relation("RoDoctor", fields: [doctorId], references: [id])
+  madeBy        User @relation("RoMadeBy", fields: [madeById], references: [id])
+
+  @@index([doctorId])
+}
