@@ -5,7 +5,7 @@ import { audit } from "@/lib/audit";
 import { MAG_SECTIONS } from "@/lib/appraisal";
 import { parseSectionData } from "@/lib/sections";
 import { buildAppraisalPdf, flattenSectionData } from "@/lib/pdf";
-import { aggregateRatings, cycleQuestions } from "@/lib/feedback";
+import { aggregateRatings, cycleQuestions, domainSummaries } from "@/lib/feedback";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handleApi(async () => {
@@ -135,6 +135,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       });
     }
 
+    // ── Chart data: CPD by category + GMP domain means ────────────────────
+    const byCategory = new Map<string, number>();
+    for (const e of entries) {
+      const cat = (e.category ?? "Uncategorised").trim() || "Uncategorised";
+      byCategory.set(cat, (byCategory.get(cat) ?? 0) + e.points);
+    }
+    const cpdByCategory = Array.from(byCategory.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    const domainOf = (type: "COLLEAGUE" | "PATIENT") => {
+      const typeCycles = cycles.filter((c) => c.cycleType === type);
+      const agg = aggregateRatings(typeCycles.flatMap((c) => c.responses), cycleQuestions(type).likert);
+      return {
+        responses: agg.totalResponses,
+        domains: domainSummaries(agg.perQuestion)
+          .filter((d): d is typeof d & { mean: number } => d.mean !== null)
+          .map((d) => ({ label: d.domain, value: d.mean })),
+      };
+    };
+    const colleague = domainOf("COLLEAGUE");
+    const patient = domainOf("PATIENT");
+
     const bytes = await buildAppraisalPdf({
       title: "Medical Appraisal Record (MAG 2022 form mapped)",
       doctorName: appraisal.doctor.name,
@@ -144,6 +168,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       status: appraisal.status,
       meetingDate: appraisal.appraisalMeetingDate,
       signedOffAt: appraisal.signedOffAt,
+      designatedBody: appraisal.doctor.designatedBody,
+      revalidationDueDate: appraisal.doctor.revalidationDueDate,
+      charts: {
+        cpdTotal: entries.reduce((s, e) => s + e.points, 0),
+        cpdEntries: entries.length,
+        cpdByCategory,
+        colleagueResponses: colleague.responses,
+        patientResponses: patient.responses,
+        colleagueDomains: colleague.domains,
+        patientDomains: patient.domains,
+      },
       sections: sectionsPdf,
     });
 

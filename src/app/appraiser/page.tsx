@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PageHeader, Card, StatusBadge, EmptyState } from "@/components/ui";
+import DownloadReportButton from "@/components/DownloadReportButton";
 import Link from "next/link";
 
 export default async function AppraiserDashboard() {
@@ -46,6 +47,11 @@ export default async function AppraiserDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <StatusBadge status={a.status} />
+                        <DownloadReportButton
+                          appraisalId={a.id}
+                          filename={`appraisal-${a.year}-${(a.doctor.gmcNumber ?? a.doctor.id).replace(/\W/g, "")}.pdf`}
+                          className="chip-secondary"
+                        />
                         <Link href={`/appraiser/appraisals/${a.id}`} className="chip-primary">
                           Review
                         </Link>

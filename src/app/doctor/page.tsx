@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Card, StatusBadge, EmptyState } from "@/components/ui";
+import DownloadReportButton from "@/components/DownloadReportButton";
 
 const QUICK_ACTIONS = [
   { href: "/doctor/appraisal", label: "MAG form", desc: "Sections & declarations" },
@@ -64,6 +65,13 @@ export default async function DoctorDashboard() {
             <Link href="/doctor/cpd" className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10">
               Log CPD
             </Link>
+            {appraisal && (
+              <DownloadReportButton
+                appraisalId={appraisal.id}
+                filename={`appraisal-${appraisal.year}-${(user.gmcNumber ?? user.id).replace(/\W/g, "")}.pdf`}
+                className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10 disabled:opacity-60"
+              />
+            )}
           </div>
         </div>
       </div>
