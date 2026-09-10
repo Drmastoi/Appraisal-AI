@@ -59,15 +59,12 @@ export default function Home() {
               </div>
 
               <h1 className="font-display mt-5 text-balance text-[42px] font-normal leading-[0.96] tracking-[-0.03em] text-[var(--nhs-black)] sm:text-[54px] lg:text-[64px]">
-                Appraisal,
+                Medical Appraisal,
                 <br />
                 <span className="italic text-[var(--nhs-blue)]">without</span> the
                 <br />
-                admin drag.
+                drag.
               </h1>
-              <p className="mt-3 max-w-[52ch] text-[13px] font-bold uppercase tracking-[0.08em] text-[var(--nhs-blue)]">
-                Now with integrated AI — inside the workflow, not bolted on
-              </p>
 
               <p className="mt-3 max-w-[52ch] text-pretty text-[16px] leading-6 text-[var(--nhs-dark-grey)]">
                 One secure portal for the <em className="font-semibold not-italic text-[var(--nhs-black)]">whole scope</em>{" "}
