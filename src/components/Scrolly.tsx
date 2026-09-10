@@ -216,15 +216,15 @@ export function Reveal({
         const vh = window.innerHeight;
         const top = rectTop(el);
         // 0 when the element's top crosses the late line, 1 when it
-        // reaches the settle line — a ~24vh scrub window.
+        // reaches the settle line — a ~22vh scrub window.
         const startLine = vh * 0.94 - delay * 0.25;
-        const windowPx = vh * 0.24;
+        const windowPx = vh * 0.22;
         return clamp01((startLine - top) / windowPx);
       },
       apply: (p) => {
         const e = easeOut(p);
         elStyle.opacity = `${e}`;
-        elStyle.transform = `translate3d(0, ${(1 - e) * 26}px, 0)`;
+        elStyle.transform = `translate3d(0, ${(1 - e) * 30}px, 0)`;
       },
     };
     function it_last(i: Item) {
@@ -292,19 +292,24 @@ export function ScrollySteps({ steps }: { steps: Step[] }) {
         for (let i = 0; i < n; i++) {
           const panel = panelRefs.current[i];
           if (!panel) continue;
-          // Continuous window: each panel owns 1/n of the timeline,
-          // with a crossfade overlap at both edges.
+          // Tight symmetric dissolve: each panel rises over the first
+          // 0.3 of its slot, holds solid, then hands off over the last
+          // 0.3. Weight = min(rise, fall) keeps neighbouring panels
+          // complementary — combined opacity is always 1 (no dip, no
+          // double-exposure at the handover).
           const pos = p * n - i;
-          let w: number;
-          if (i === 0) w = smooth(clamp01((pos + 0.85) / 0.85)) * smooth(clamp01((1.25 - pos) / 0.5));
-          else if (i === n - 1) w = smooth(clamp01((pos + 0.5) / 0.5));
-          else w = smooth(clamp01((pos + 0.5) / 0.5)) * smooth(clamp01((1.25 - pos) / 0.5));
+          const wIn = smooth(clamp01((pos + 0.15) / 0.3));
+          const wOut = 1 - smooth(clamp01((pos - 0.85) / 0.3));
+          const w = Math.min(wIn, wOut);
           const panelStyle = panel.style;
           panelStyle.opacity = `${w}`;
-          panelStyle.transform = `translate3d(0, ${(1 - w) * 14}px, 0)`;
+          panelStyle.transform = `translate3d(0, ${(1 - w) * 26}px, 0)`;
           panelStyle.pointerEvents = w > 0.5 ? "auto" : "none";
           const numeral = numeralRefs.current[i];
-          if (numeral) numeral.style.opacity = `${0.18 + 0.82 * w}`;
+          if (numeral) {
+            numeral.style.opacity = `${0.18 + 0.82 * w}`;
+            numeral.style.transform = `scale(${(0.92 + 0.08 * w).toFixed(3)})`;
+          }
         }
         const s = Math.min(n - 1, Math.round(p * (n - 1)));
         if (s !== lastStep) {
@@ -329,7 +334,7 @@ export function ScrollySteps({ steps }: { steps: Step[] }) {
   }, [steps.length]);
 
   return (
-    <div ref={wrapRef} className="scrolly-steps lg:h-[320vh]">
+    <div ref={wrapRef} className="scrolly-steps lg:h-[300vh]">
       {/* Pinned stage — desktop */}
       <div className="scrolly-stage hidden lg:block">
         <div className="relative border border-[var(--nhs-border-grey)] bg-white p-8 shadow-sm">
@@ -420,8 +425,9 @@ export function HeroScrub({ children, className = "" }: { children: ReactNode; c
         const e = easeOut(p);
         for (const t of targets) {
           const depth = parseFloat(t.dataset.scrub || "0.5") || 0.5;
-          const drift = e * 110 * depth;
-          t.style.transform = `translate3d(0, ${-drift}px, 0)`;
+          const drift = e * 130 * depth;
+          // Slight push-back scale adds depth separation between layers.
+          t.style.transform = `translate3d(0, ${-drift}px, 0) scale(${(1 - e * 0.04 * depth).toFixed(4)})`;
           if (t.hasAttribute("data-fade")) t.style.opacity = `${clamp01(1 - p * 1.5)}`;
         }
       },
