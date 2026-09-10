@@ -435,9 +435,9 @@ export default function Home() {
                           </td>
                         );
                       })}
-                      <td className="border-l border-[var(--nhs-blue)]/10 bg-[#e8f1fc] px-2 py-2 text-center align-middle">
-                        <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--nhs-blue)]">
-                          <span aria-hidden className="text-[11px]">
+                      <td className="border-l border-[var(--nhs-green)]/20 bg-[#eaf5ec] px-2 py-2 text-center align-middle">
+                        <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#00401a]">
+                          <span aria-hidden className="text-[11px] text-[#00857d]">
                             ✓
                           </span>
                           {r.us}
@@ -450,7 +450,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--nhs-border-grey)] bg-[var(--nhs-light-grey)] px-3 py-1.5 text-[11px] leading-none text-[var(--nhs-mid-grey)]">
               <span className="inline-flex items-center gap-2">
-                <span className="font-semibold text-[var(--nhs-black)]">✓</span> Full ·
+                <span className="font-semibold text-[#00857d]">✓</span> Full ·
                 <span className="font-semibold text-[#7a4d00]">◐</span> Partial ·
                 <span className="font-semibold">—</span> No
               </span>
