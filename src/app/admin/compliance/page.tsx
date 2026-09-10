@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PageHeader, Card, StatusBadge } from "@/components/ui";
 import RecommendForm from "./RecommendForm";
+import DownloadReportButton from "@/components/DownloadReportButton";
 import Link from "next/link";
 
 export default async function AdminCompliancePage() {
@@ -108,8 +109,8 @@ export default async function AdminCompliancePage() {
                   <td className="px-3 py-3">
                     {appraisal?.status === "SIGNED_OFF" ? (
                       <div className="flex gap-2">
-                        <a href={`/api/appraisals/${appraisal.id}/export`} className="chip-secondary">MAG PDF</a>
-                        <a href={`/api/admin/ro-bundle/${appraisal.id}`} className="chip-teal-outline">RO bundle</a>
+                        <DownloadReportButton appraisalId={appraisal.id} className="chip-secondary" label="MAG PDF" />
+                        <DownloadReportButton appraisalId={appraisal.id} variant="ro-bundle" className="chip-teal-outline" label="RO bundle" />
                       </div>
                     ) : (
                       <Link href={appraisal ? `/admin` : "/admin/users"} className="text-xs text-slate-400">—</Link>
