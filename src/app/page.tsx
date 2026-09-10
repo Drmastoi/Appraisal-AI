@@ -145,7 +145,7 @@ export default function Home() {
                 </div>
 
                 {/* timeline rail */}
-                <div className="grid grid-cols-[88px_1fr] gap-0">
+                <div className="grid grid-cols-[168px_1fr] gap-0">
                   <div className="border-r border-[var(--nhs-border-grey)] bg-[var(--nhs-light-grey)] px-4 py-5">
                     <div className="space-y-4">
                       {[
@@ -157,13 +157,13 @@ export default function Home() {
                         <div key={s.k} className="flex items-center gap-2">
                           <span className={`h-2 w-2 rounded-full ${s.ok ? "bg-[var(--nhs-green)]" : "bg-[var(--nhs-warm-yellow)]"}`} />
                           <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--nhs-dark-grey)]">{s.k}</span>
-                          <span className="ml-auto font-mono text-xs font-semibold text-[var(--nhs-black)]">{s.v}</span>
+                          <span className="ml-auto whitespace-nowrap font-mono text-xs font-semibold text-[var(--nhs-black)]">{s.v}</span>
                         </div>
                       ))}
                     </div>
                     <div className="mt-6 border border-[var(--nhs-border-grey)] bg-white px-3 py-3">
                       <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--nhs-mid-grey)]">Revalidation</div>
-                      <div className="mt-1 font-mono text-sm font-bold text-[var(--nhs-black)]">Due Mar 2027</div>
+                      <div className="whitespace-nowrap font-mono text-sm font-bold text-[var(--nhs-black)]">Due Mar 2027</div>
                       <div className="text-[11px] text-[var(--nhs-dark-grey)]">Year 3 of 5</div>
                     </div>
                   </div>
