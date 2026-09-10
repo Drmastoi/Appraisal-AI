@@ -54,7 +54,7 @@ export default function Home() {
                   </span>
                   Model form · validated sections
                 </div>
-                <div className="inline-flex items-center gap-1.5 border border-[var(--nhs-blue)]/20 bg-[#e8f1fc] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--nhs-blue)]">
+                <div className="inline-flex items-center gap-1.5 border border-[var(--nhs-green)]/25 bg-[#eaf5ec] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#00401a]">
                   <span aria-hidden>✦</span> Integrated AI — gated &amp; audited
                 </div>
               </div>
