@@ -196,21 +196,15 @@ body {
   .bg-nhs-light-grey { background-color: var(--nhs-light-grey); }
   .border-nhs { border-color: var(--nhs-border-grey); }
 
-  /* ── Scrollytelling ─────────────────────────────────────────── */
-  /* Editorial easing — long, soft deceleration — inlined per rule for
-     predictable parsing across toolchains. */
-  /* No-JS fallback: initial hidden states only apply when JS is present. */
+  /* ── Scrollytelling — scroll-scrubbed ───────────────────────── */
+  /* Scroll position is the timeline: styles are written per frame by
+     the engine in Scrolly.tsx. CSS only supplies layout + no-JS and
+     reduced-motion guards — no transition-based animation here. */
+
+  /* No-JS guard: initial hidden states only apply when JS is present. */
   html.js .reveal {
     opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: opacity, transform;
-  }
-  html.js .reveal[data-shown="true"] {
-    opacity: 1;
-    transform: none;
   }
 
   /* Scroll progress bar under the masthead */
@@ -228,8 +222,6 @@ body {
     height: 100%;
     width: 0;
     background: var(--nhs-warm-yellow);
-    /* Smooth over throttled updates; short enough not to trail fast scrolls */
-    transition: width 0.1s linear;
   }
 
   /* Section rail (2xl screens) */
@@ -277,7 +269,7 @@ body {
     opacity: 1;
   }
 
-  /* Pinned scrolly stage */
+  /* Pinned scrolly stage — scrubbed */
   .scrolly-stage {
     position: sticky;
     top: 5.5rem; /* below the masthead */
@@ -288,34 +280,16 @@ body {
     position: absolute;
     inset: 2rem;
     opacity: 0;
-    transform: translateY(10px);
-    /* Outgoing: quick, quiet fade so the stage empties before the next composes */
-    transition: opacity 0.35s ease, transform 0.35s ease;
     pointer-events: none;
+    will-change: opacity, transform;
   }
-  .scrolly-panel[data-active="true"] {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    /* Incoming: slower, softer rise, held a beat behind the outgoing fade */
-    transition:
-      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
-      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+  .scrolly-dot {
+    background: var(--nhs-border-grey);
+    transition: background-color 0.3s;
   }
-  /* Inner content composes in: numeral → title → body → dots */
-  .scrolly-panel .scrolly-el {
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  .scrolly-dot-on {
+    background: var(--nhs-blue);
   }
-  .scrolly-panel[data-active="true"] .scrolly-el {
-    opacity: 1;
-    transform: none;
-  }
-  .scrolly-panel[data-active="true"] .scrolly-el-1 { transition-delay: 0.16s; }
-  .scrolly-panel[data-active="true"] .scrolly-el-2 { transition-delay: 0.26s; }
-  .scrolly-panel[data-active="true"] .scrolly-el-3 { transition-delay: 0.36s; }
-  .scrolly-panel[data-active="true"] .scrolly-el-4 { transition-delay: 0.44s; }
   /* Reserve height so the absolute panels have a visible card behind them */
   .scrolly-stage > div {
     min-height: 240px;
@@ -325,24 +299,16 @@ body {
     html.js .reveal {
       opacity: 1;
       transform: none;
-      transition: none;
     }
-    .scrolly-panel,
-    .scrolly-panel[data-active="true"] {
+    .scrolly-panel {
       position: relative;
       inset: auto;
       opacity: 1;
-      transform: none;
       pointer-events: auto;
       display: none;
     }
-    .scrolly-panel[data-active="true"] {
+    .scrolly-panel:first-of-type {
       display: grid;
-    }
-    .scrolly-panel .scrolly-el {
-      opacity: 1;
-      transform: none;
-      transition: none;
     }
   }
 }

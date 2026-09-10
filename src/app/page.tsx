@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Reveal, ScrollySteps } from "@/components/Scrolly";
+import { HeroScrub, Reveal, ScrollySteps } from "@/components/Scrolly";
 
 export default function Home() {
   return (
@@ -44,9 +44,9 @@ export default function Home() {
       {/* ── Hero: editorial split — big type left, dossier right ── */}
       <main>
         <section id="hero" className="mx-auto max-w-[1280px] px-6 pt-8 lg:px-8 lg:pt-10">
-          <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+          <HeroScrub className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
             {/* Left — wordmark + headline */}
-            <div className="relative">
+            <div className="relative" data-scrub="0.35" data-fade>
               <div className="flex flex-wrap gap-2">
                 <div className="inline-flex items-center gap-2 border border-[var(--nhs-border-grey)] bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--nhs-dark-grey)]">
                   <span className="inline-flex h-5 items-center bg-[var(--nhs-blue)] px-2 text-[10px] font-bold tracking-[0.08em] text-white">
@@ -121,7 +121,7 @@ export default function Home() {
             </div>
 
             {/* Right — \"dossier\" paper stack */}
-            <div className="relative lg:pl-6">
+            <div className="relative lg:pl-6" data-scrub="1">
               {/* paper behind */}
               <div className="absolute inset-0 -z-10 hidden translate-x-3 translate-y-3 border border-[var(--nhs-border-grey)] bg-white lg:block" />
               <div className="absolute inset-0 -z-10 hidden translate-x-1.5 translate-y-1.5 border border-[var(--nhs-border-grey)] bg-[#e8edf0] lg:block" />
@@ -204,7 +204,7 @@ export default function Home() {
               </div>
 
               {/* floating badge — NHS Dark Blue, square */}
-              <div className="pointer-events-none absolute -bottom-4 -right-2 hidden rotate-[-1deg] border-2 border-[var(--nhs-dark-blue)] bg-[var(--nhs-dark-blue)] px-4 py-3 text-white shadow-lg lg:flex lg:items-center lg:gap-3">
+              <div className="pointer-events-none absolute -bottom-4 -right-2 hidden rotate-[-1deg] border-2 border-[var(--nhs-dark-blue)] bg-[var(--nhs-dark-blue)] px-4 py-3 text-white shadow-lg lg:flex lg:items-center lg:gap-3" data-scrub="0.7" data-fade>
                 <span className="flex h-8 w-8 items-center justify-center bg-white/15 text-sm">✦</span>
                 <div className="pr-1 text-left leading-tight">
                   <div className="text-xs font-bold tracking-tight">Gated AI, not bolted on</div>
@@ -212,7 +212,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </HeroScrub>
         </section>
 
         {/* ── Approach — three columns with oversized numerals ── */}

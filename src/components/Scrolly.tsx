@@ -3,13 +3,120 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /* ────────────────────────────────────────────────────────────────
-   Scrollytelling primitives (dependency-free).
-   - ScrollProgress: NHS-yellow progress bar + section rail (2xl+)
-   - Reveal: IntersectionObserver fade/rise, no-JS & reduced-motion safe
-   - ScrollySteps: pinned "How it works" stage driven by scroll position
-   All motion is disabled under prefers-reduced-motion; content is fully
-   visible when JS is off (html.no-js guards the hidden initial states).
+   Scroll-scrubbed scrollytelling engine (dependency-free).
+
+   Scroll position IS the timeline: every effect is a pure function
+   of scroll position, so motion scrubs forward and backward with
+   the wheel/trackpad — no one-shot transitions.
+
+   - One shared ticker (rAF when available + light interval poll for
+     webviews that fire neither rAF nor scroll events).
+   - Batched layout reads → writes each frame to avoid thrash.
+   - ScrollProgress: top progress bar + section rail (2xl+).
+   - Reveal: scrubbed entrance — opacity/translate track the
+     element's position through the viewport, fully reversible.
+   - ScrollySteps: pinned stage; panels cross-fade CONTINUOUSLY with
+     scroll (not stepwise), numerals/dots scrub along.
+   - HeroScrub: layered parallax departure on the hero children.
+   All motion no-ops under prefers-reduced-motion; content is fully
+   visible without JS (html.no-js guards initial hidden states).
    ──────────────────────────────────────────────────────────────── */
+
+const EPS = 0.0008;
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/* ── Shared engine ─────────────────────────────────────────────── */
+
+type Item = {
+  measure: () => number; // returns progress 0..1 (layout read)
+  apply: (p: number) => void; // writes styles (no reads)
+  last: number;
+};
+
+const items = new Set<Item>();
+let ticking = false;
+let frameId = 0;
+let pollId: ReturnType<typeof setInterval> | null = null;
+let reducedMotion = false;
+let rAFSeen = false;
+
+function getScrollY(): number {
+  const se = document.scrollingElement;
+  return se ? se.scrollTop : window.scrollY || document.documentElement.scrollTop || 0;
+}
+
+function tick() {
+  // Phase 1 — reads (all rects measured before any writes).
+  const jobs: Array<[Item, number]> = [];
+  if (!reducedMotion) {
+    for (const it of items) {
+      const p = it.measure();
+      if (Math.abs(p - it.last) > EPS) {
+        it.last = p;
+        jobs.push([it, p]);
+      }
+    }
+  }
+  // Phase 2 — writes.
+  for (const [it, p] of jobs) it.apply(p);
+}
+
+function frame() {
+  if (!ticking) return;
+  tick();
+  // Schedule next frame — rAF when the host actually fires it, else a cheap timer.
+  if (rAFWorks) {
+    frameId = requestAnimationFrame(frame);
+  } else {
+    frameId = window.setTimeout(frame, 32) as unknown as number;
+  }
+}
+
+let rAFWorks = false;
+
+function ensureLoop() {
+  if (ticking) return;
+  ticking = true;
+  reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  // Detect a live rAF: if the first callback never runs (some embedded
+  // webviews register the API but never fire it), fall back to a timer
+  // loop that drives the same tick.
+  if (typeof requestAnimationFrame === "function") {
+    rAFWorks = true;
+    requestAnimationFrame(() => {
+      rAFSeen = true; // first frame arrived — rAF is live
+    });
+    window.setTimeout(() => {
+      if (rAFWorks && !rAFSeen) {
+        rAFWorks = false;
+        if (ticking) {
+          if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(frameId);
+          frameId = window.setTimeout(frame, 32) as unknown as number;
+        }
+      }
+    }, 120);
+  }
+  frame();
+  // Some embedded webviews never fire scroll events either; a light poll
+  // drives the same tick so scrubbing stays honest everywhere.
+  pollId = setInterval(tick, 150);
+}
+
+function stopLoop() {
+  if (!ticking) return;
+  ticking = false;
+  if (rAFWorks && typeof cancelAnimationFrame === "function") cancelAnimationFrame(frameId);
+  else clearTimeout(frameId);
+  if (pollId) clearInterval(pollId);
+  pollId = null;
+}
+
+/** Measure helpers (pure reads). */
+const rectTop = (el: HTMLElement) => el.getBoundingClientRect().top;
+
+/* ── ScrollProgress: bar (direct writes) + rail (rare state) ───── */
 
 const SECTION_LABELS = [
   { id: "hero", label: "Overview" },
@@ -19,47 +126,50 @@ const SECTION_LABELS = [
 ];
 
 export function ScrollProgress() {
-  const [pct, setPct] = useState(0);
+  const fillRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState("hero");
 
   useEffect(() => {
-    let last = 0;
-    const update = () => {
-      const doc = document.documentElement;
-      const max = doc.scrollHeight - window.innerHeight;
-      setPct(max > 0 ? Math.min(100, Math.max(0, (window.scrollY / max) * 100)) : 0);
-      // Active section = last one whose top is above the viewport midline.
-      let current = SECTION_LABELS[0].id;
-      for (const s of SECTION_LABELS) {
-        const el = document.getElementById(s.id);
-        if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = s.id;
-      }
-      setActive(current);
+    const fill = fillRef.current;
+    if (!fill) return;
+    let lastPct = -1;
+    let lastActive = "";
+    const item: Item = {
+      last: 0,
+      measure: () => {
+        const doc = document.documentElement;
+        const max = doc.scrollHeight - window.innerHeight;
+        return max > 0 ? clamp01(getScrollY() / max) : 0;
+      },
+      apply: (p) => {
+        const pct = Math.round(p * 1000) / 10;
+        if (pct !== lastPct) {
+          lastPct = pct;
+          fill.style.width = `${pct}%`;
+        }
+        let current = SECTION_LABELS[0].id;
+        for (const s of SECTION_LABELS) {
+          const el = document.getElementById(s.id);
+          if (el && rectTop(el) <= window.innerHeight * 0.45) current = s.id;
+        }
+        if (current !== lastActive) {
+          lastActive = current;
+          setActive(current);
+        }
+      },
     };
-    // Throttled direct update. Some embedded webviews fire neither rAF nor
-    // scroll events, so a light poll keeps the indicator honest everywhere.
-    const onScroll = () => {
-      const now = performance.now();
-      if (now - last > 50) {
-        last = now;
-        update();
-      }
-    };
-    const poll = setInterval(update, 200);
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    items.add(item);
+    ensureLoop();
     return () => {
-      clearInterval(poll);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      items.delete(item);
+      if (items.size === 0) stopLoop();
     };
   }, []);
 
   return (
     <>
       <div className="scrolly-progress" aria-hidden>
-        <div className="scrolly-progress-fill" style={{ width: `${pct}%` }} />
+        <div ref={fillRef} className="scrolly-progress-fill" style={{ width: "0%" }} />
       </div>
       <nav className="scrolly-rail" aria-label="Page progress">
         {SECTION_LABELS.map((s) => (
@@ -79,6 +189,8 @@ export function ScrollProgress() {
   );
 }
 
+/* ── Reveal: scrubbed, reversible entrance ─────────────────────── */
+
 export function Reveal({
   children,
   delay = 0,
@@ -86,7 +198,7 @@ export function Reveal({
   as: Tag = "div",
 }: {
   children: ReactNode;
-  /** stagger delay in ms */
+  /** trigger offset in ms — shifts the scrub start later for stagger */
   delay?: number;
   className?: string;
   as?: "div" | "section" | "li" | "tr";
@@ -96,67 +208,123 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            (e.target as HTMLElement).dataset.shown = "true";
-            io.unobserve(e.target);
-          }
-        }
+    const elStyle = el.style;
+    const item: Item = {
+      last: -1,
+      measure: () => {
+        if (el.offsetParent === null) return it_last(item);
+        const vh = window.innerHeight;
+        const top = rectTop(el);
+        // 0 when the element's top crosses the late line, 1 when it
+        // reaches the settle line — a ~24vh scrub window.
+        const startLine = vh * 0.94 - delay * 0.25;
+        const windowPx = vh * 0.24;
+        return clamp01((startLine - top) / windowPx);
       },
-      { rootMargin: "0px 0px -12% 0px", threshold: 0.08 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+      apply: (p) => {
+        const e = easeOut(p);
+        elStyle.opacity = `${e}`;
+        elStyle.transform = `translate3d(0, ${(1 - e) * 26}px, 0)`;
+      },
+    };
+    function it_last(i: Item) {
+      return i.last < 0 ? 0 : i.last;
+    }
+    // No-JS is handled by html.no-js; reduced-motion gets final states.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      elStyle.opacity = "1";
+      elStyle.transform = "none";
+      return;
+    }
+    items.add(item);
+    ensureLoop();
+    return () => {
+      items.delete(item);
+      if (items.size === 0) stopLoop();
+    };
+  }, [delay]);
 
   return (
     <Tag
       // @ts-expect-error – polymorphic ref
       ref={ref}
       className={`reveal ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </Tag>
   );
 }
 
+/* ── ScrollySteps: pinned stage, continuously scrubbed panels ──── */
+
 type Step = { n: string; title: string; body: string };
 
 export function ScrollySteps({ steps }: { steps: Step[] }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [idx, setIdx] = useState(0);
+  const panelRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const numeralRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const dotRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    let last = 0;
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      const total = rect.height - window.innerHeight;
-      // progress 0..1 through the pinned region
-      const p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 0;
-      const i = Math.min(steps.length - 1, Math.floor(p * steps.length));
-      setIdx(i);
+    const wrap = wrapRef.current;
+    const stage = wrap?.querySelector(".scrolly-stage") as HTMLElement | null;
+    if (!wrap || !stage) return;
+    let lastStep = -1;
+
+    const item: Item = {
+      last: -1,
+      measure: () => {
+        // Mobile fallback: stage hidden → hold current state.
+        if (stage.offsetParent === null) return item.last < 0 ? 0 : item.last;
+        const vh = window.innerHeight;
+        const rect = wrap.getBoundingClientRect();
+        const y = getScrollY();
+        const stickyTop = parseFloat(getComputedStyle(stage).top) || 88;
+        const absTop = rect.top + y;
+        const start = absTop - stickyTop; // pin engages
+        const end = absTop + rect.height - vh; // wrapper bottom reaches viewport bottom
+        const span = end - start;
+        return span > 0 ? clamp01((y - start) / span) : 0;
+      },
+      apply: (p) => {
+        const n = steps.length;
+        for (let i = 0; i < n; i++) {
+          const panel = panelRefs.current[i];
+          if (!panel) continue;
+          // Continuous window: each panel owns 1/n of the timeline,
+          // with a crossfade overlap at both edges.
+          const pos = p * n - i;
+          let w: number;
+          if (i === 0) w = smooth(clamp01((pos + 0.85) / 0.85)) * smooth(clamp01((1.25 - pos) / 0.5));
+          else if (i === n - 1) w = smooth(clamp01((pos + 0.5) / 0.5));
+          else w = smooth(clamp01((pos + 0.5) / 0.5)) * smooth(clamp01((1.25 - pos) / 0.5));
+          const panelStyle = panel.style;
+          panelStyle.opacity = `${w}`;
+          panelStyle.transform = `translate3d(0, ${(1 - w) * 14}px, 0)`;
+          panelStyle.pointerEvents = w > 0.5 ? "auto" : "none";
+          const numeral = numeralRefs.current[i];
+          if (numeral) numeral.style.opacity = `${0.18 + 0.82 * w}`;
+        }
+        const s = Math.min(n - 1, Math.round(p * (n - 1)));
+        if (s !== lastStep) {
+          lastStep = s;
+          setStep(s);
+          dotRefs.current.forEach((d, di) => {
+            d?.classList.toggle("scrolly-dot-on", di === s);
+          });
+        }
+      },
     };
-    // Throttled update + light poll (scroll events/rAF unreliable in webviews).
-    const onScroll = () => {
-      const now = performance.now();
-      if (now - last > 50) {
-        last = now;
-        update();
-      }
-    };
-    const poll = setInterval(update, 200);
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      items.add(item);
+      ensureLoop();
+    } else {
+      item.apply(0);
+    }
     return () => {
-      clearInterval(poll);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      items.delete(item);
+      if (items.size === 0) stopLoop();
     };
   }, [steps.length]);
 
@@ -166,22 +334,34 @@ export function ScrollySteps({ steps }: { steps: Step[] }) {
       <div className="scrolly-stage hidden lg:block">
         <div className="relative border border-[var(--nhs-border-grey)] bg-white p-8 shadow-sm">
           {steps.map((s, i) => (
-            <div key={s.n} data-active={i === idx} className="scrolly-panel grid grid-cols-[96px_1fr] gap-6">
+            <div
+              key={s.n}
+              ref={(el) => {
+                panelRefs.current[i] = el;
+              }}
+              className="scrolly-panel grid grid-cols-[96px_1fr] gap-6"
+            >
               <div
-                className={`scrolly-el scrolly-el-1 font-display text-[64px] leading-none tracking-[-0.04em] transition-colors duration-700 ${
-                  i === idx ? "text-[var(--nhs-blue)]" : "text-[var(--nhs-blue)]/20"
+                ref={(el) => {
+                  numeralRefs.current[i] = el;
+                }}
+                className={`font-display text-[64px] leading-none tracking-[-0.04em] ${
+                  i === step ? "text-[var(--nhs-blue)]" : "text-[var(--nhs-blue)]/25"
                 }`}
               >
                 {s.n}
               </div>
               <div>
-                <h3 className="scrolly-el scrolly-el-2 text-[20px] font-bold tracking-tight text-[var(--nhs-black)]">{s.title}</h3>
-                <p className="scrolly-el scrolly-el-3 mt-3 max-w-[52ch] text-[15px] leading-7 text-[var(--nhs-dark-grey)]">{s.body}</p>
-                <div className="scrolly-el scrolly-el-4 mt-6 flex gap-1.5" aria-hidden>
+                <h3 className="text-[20px] font-bold tracking-tight text-[var(--nhs-black)]">{s.title}</h3>
+                <p className="mt-3 max-w-[52ch] text-[15px] leading-7 text-[var(--nhs-dark-grey)]">{s.body}</p>
+                <div className="mt-6 flex gap-1.5" aria-hidden>
                   {steps.map((_, d) => (
                     <span
                       key={d}
-                      className={`h-1 w-8 transition-colors duration-500 ${d === idx ? "bg-[var(--nhs-blue)]" : "bg-[var(--nhs-border-grey)]"}`}
+                      ref={(el) => {
+                        if (i === 0) dotRefs.current[d] = el;
+                      }}
+                      className={`scrolly-dot h-1 w-8 ${d === step ? "scrolly-dot-on" : ""}`}
                     />
                   ))}
                 </div>
@@ -201,6 +381,62 @@ export function ScrollySteps({ steps }: { steps: Step[] }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── HeroScrub: layered parallax departure ─────────────────────── */
+/* Children tagged with data-scrub depart at different speeds:
+     data-scrub="<depth>"  vertical drift multiplier (0..1)
+     data-fade             additionally fades out with scroll
+   Scrubs over the hero's own height as it leaves the viewport. */
+
+export function HeroScrub({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const targets = Array.from(el.querySelectorAll<HTMLElement>("[data-scrub]"));
+    if (targets.length === 0) return;
+
+    const item: Item = {
+      last: -1,
+      measure: () => {
+        const top = rectTop(el);
+        const h = el.offsetHeight;
+        // 0 at rest; 1 when the hero has fully left the viewport.
+        return clamp01(-top / Math.max(1, h));
+      },
+      apply: (p) => {
+        if (p <= 0) {
+          for (const t of targets) {
+            t.style.transform = "";
+            t.style.opacity = "";
+          }
+          return;
+        }
+        const e = easeOut(p);
+        for (const t of targets) {
+          const depth = parseFloat(t.dataset.scrub || "0.5") || 0.5;
+          const drift = e * 110 * depth;
+          t.style.transform = `translate3d(0, ${-drift}px, 0)`;
+          if (t.hasAttribute("data-fade")) t.style.opacity = `${clamp01(1 - p * 1.5)}`;
+        }
+      },
+    };
+    items.add(item);
+    ensureLoop();
+    return () => {
+      items.delete(item);
+      if (items.size === 0) stopLoop();
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={className}>
+      {children}
     </div>
   );
 }
