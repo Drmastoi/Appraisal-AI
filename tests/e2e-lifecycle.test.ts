@@ -7,10 +7,14 @@ import { buildAppraisalPdf } from "@/lib/pdf";
 import { DEFAULT_SECTIONS } from "@/lib/appraisal";
 
 // This lifecycle test exercises the full appraisal workflow at the service
-// layer against a scratch SQLite database — the same flows the UI drives.
-const prisma = new PrismaClient({
-  datasources: { db: { url: "file:./test-lifecycle.db" } },
-});
+// layer against a disposable Postgres database — the same flows the UI drives.
+// Opt-in: set TEST_DATABASE_URL to a migrated Postgres URL (e.g. a Neon branch);
+// without it the suite is skipped so `npm test` stays DB-free.
+const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? "";
+const prisma = TEST_DB_URL
+  ? new PrismaClient({ datasources: { db: { url: TEST_DB_URL } } })
+  : new PrismaClient();
+const describeE2E = TEST_DB_URL ? describe : describe.skip;
 
 const ADMIN = { email: "lc-admin@test.nhs.uk", password: "Admin123!", name: "LC Admin" };
 const APPRAISER = { email: "lc-appraiser@test.nhs.uk", password: "Appraiser123!", name: "LC Appraiser" };
@@ -70,7 +74,7 @@ async function seedUsers() {
   doctorId = doctor.id;
 }
 
-describe("full appraisal lifecycle", () => {
+describeE2E("full appraisal lifecycle", () => {
   it("runs end to end: assign → complete → submit → review → sign off → carry forward → export", async () => {
     await seedUsers();
 

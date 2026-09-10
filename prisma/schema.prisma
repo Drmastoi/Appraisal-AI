@@ -1,15 +1,15 @@
 // UK Medical Appraisal Portal — data model
-// NOTE: SQLite is used for local development. The schema is written to be
-// portable: switch the provider below to "postgresql" for staging/production
-// (UK-region hosted). Enum-like fields are Strings validated with zod in the
-// application layer so the same schema runs on both providers.
+// Production runs PostgreSQL (Neon, UK/London region) with migrations in
+// prisma/migrations; local dev may point DATABASE_URL at the same Neon database
+// or a disposable Postgres. Enum-like fields are Strings validated with zod in
+// the application layer.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
