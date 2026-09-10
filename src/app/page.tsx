@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Reveal, ScrollySteps } from "@/components/Scrolly";
 
 export default function Home() {
   return (
@@ -42,7 +43,7 @@ export default function Home() {
 
       {/* ── Hero: editorial split — big type left, dossier right ── */}
       <main>
-        <section className="mx-auto max-w-[1280px] px-6 pt-8 lg:px-8 lg:pt-10">
+        <section id="hero" className="mx-auto max-w-[1280px] px-6 pt-8 lg:px-8 lg:pt-10">
           <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
             {/* Left — wordmark + headline */}
             <div className="relative">
@@ -215,15 +216,15 @@ export default function Home() {
         </section>
 
         {/* ── Approach — three columns with oversized numerals ── */}
-        <section className="mx-auto max-w-[1280px] px-6 pt-14 lg:px-8">
-          <div className="flex items-end justify-between gap-4 border-b-2 border-[var(--nhs-border-grey)] pb-4">
+        <section id="how" className="mx-auto max-w-[1280px] px-6 pt-14 lg:px-8">
+          <Reveal className="flex items-end justify-between gap-4 border-b-2 border-[var(--nhs-border-grey)] pb-4">
             <h2 className="font-display text-[28px] leading-none tracking-[-0.02em] text-[var(--nhs-black)]">How it works</h2>
             <span className="hidden text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--nhs-mid-grey)] sm:inline">
               Doctor → Appraiser → Responsible Officer
             </span>
-          </div>
-          <div className="grid gap-6 pt-6 sm:grid-cols-3">
-            {[
+          </Reveal>
+          <ScrollySteps
+            steps={[
               {
                 n: "01",
                 title: "Doctor completes the MAG",
@@ -239,19 +240,13 @@ export default function Home() {
                 title: "RO & admin have oversight",
                 body: "Compliance views, assignment, revalidation countdown and a structured export bundle for the GMC recommendation.",
               },
-            ].map((c) => (
-              <div key={c.n} className="border border-[var(--nhs-border-grey)] bg-white p-6">
-                <div className="font-display text-[40px] leading-none tracking-[-0.04em] text-[var(--nhs-blue)]/20">{c.n}</div>
-                <h3 className="mt-2 text-[16px] font-bold tracking-tight text-[var(--nhs-black)]">{c.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--nhs-dark-grey)]">{c.body}</p>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </section>
 
         {/* ── Features — staggered bento ── */}
-        <section className="mx-auto max-w-[1280px] px-6 pt-10 lg:px-8">
-          <div className="grid gap-4 lg:grid-cols-12">
+        <section id="features" className="mx-auto max-w-[1280px] px-6 pt-10 lg:px-8">
+          <Reveal className="grid gap-4 lg:grid-cols-12">
             <div className="border border-[var(--nhs-border-grey)] bg-white p-7 lg:col-span-7">
               <div className="inline-flex items-center gap-2 bg-[var(--nhs-light-grey)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--nhs-dark-grey)]">
                 MAG 2022
@@ -339,7 +334,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
 
         {/* ── Comparison — minimal, compact matrix (NHS + SEO) ── */}
@@ -360,7 +355,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-4 border border-[var(--nhs-border-grey)] bg-white">
+          <Reveal className="mt-4 border border-[var(--nhs-border-grey)] bg-white">
             <div className="flex items-center justify-between border-b border-[var(--nhs-border-grey)] bg-[var(--nhs-light-grey)] px-3 py-1.5 text-[11px] text-[var(--nhs-dark-grey)] sm:hidden">
               <span className="font-medium">← Swipe to compare →</span>
               <span className="font-semibold text-[var(--nhs-mid-grey)]">4 products</span>
@@ -453,7 +448,7 @@ export default function Home() {
               </span>
               <span>Mar 2026 · not a procurement comparison</span>
             </div>
-          </div>
+          </Reveal>
           <p className="mt-2 max-w-[72ch] text-[12px] leading-4 text-[var(--nhs-dark-grey)]">
             FourteenFish remains editable after submission; Clarity&apos;s AI sits outside the workflow; toolkit products
             leave the RO to reconcile. This portal locks on sign-off, versions every edit and gates AI in-workflow — so
@@ -492,7 +487,7 @@ export default function Home() {
 
         {/* ── Final CTA — NHS Blue ── */}
         <section className="mx-auto max-w-[1280px] px-6 pb-12 pt-10 lg:px-8">
-          <div className="border-2 border-[var(--nhs-dark-blue)] bg-[var(--nhs-blue)] px-6 py-8 text-white sm:px-8 sm:py-10">
+          <Reveal className="border-2 border-[var(--nhs-dark-blue)] bg-[var(--nhs-blue)] px-6 py-8 text-white sm:px-8 sm:py-10">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="font-display text-[28px] leading-none tracking-tight text-white sm:text-[32px]">
@@ -518,7 +513,7 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
       </main>
 

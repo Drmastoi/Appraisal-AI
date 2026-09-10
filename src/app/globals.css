@@ -195,4 +195,126 @@ body {
   .bg-nhs-dark-blue { background-color: var(--nhs-dark-blue); }
   .bg-nhs-light-grey { background-color: var(--nhs-light-grey); }
   .border-nhs { border-color: var(--nhs-border-grey); }
+
+  /* ── Scrollytelling ─────────────────────────────────────────── */
+  /* No-JS fallback: initial hidden states only apply when JS is present. */
+  html.js .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  html.js .reveal[data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Scroll progress bar under the masthead */
+  .scrolly-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 40;
+    background: transparent;
+    pointer-events: none;
+  }
+  .scrolly-progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--nhs-warm-yellow);
+  }
+
+  /* Section rail (2xl screens) */
+  .scrolly-rail {
+    position: fixed;
+    right: 1.25rem;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 30;
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 1536px) {
+    .scrolly-rail { display: flex; }
+  }
+  .scrolly-rail-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .scrolly-rail-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--nhs-blue) 25%, transparent);
+    transition: background-color 0.3s, box-shadow 0.3s;
+  }
+  .scrolly-rail-item[data-active="true"] .scrolly-rail-dot {
+    background: var(--nhs-blue);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--nhs-blue) 18%, transparent);
+  }
+  .scrolly-rail-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--nhs-mid-grey);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .scrolly-rail-item:hover .scrolly-rail-label,
+  .scrolly-rail-item[data-active="true"] .scrolly-rail-label {
+    opacity: 1;
+  }
+
+  /* Pinned scrolly stage */
+  .scrolly-stage {
+    position: sticky;
+    top: 5.5rem; /* below the masthead */
+    padding-top: 2rem;
+  }
+  .scrolly-panel {
+    grid-template-columns: 96px 1fr;
+    position: absolute;
+    inset: 2rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    pointer-events: none;
+  }
+  .scrolly-panel[data-active="true"] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  /* Reserve height so the absolute panels have a visible card behind them */
+  .scrolly-stage > div {
+    min-height: 240px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.js .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    .scrolly-panel,
+    .scrolly-panel[data-active="true"] {
+      position: relative;
+      inset: auto;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+      display: none;
+    }
+    .scrolly-panel[data-active="true"] {
+      display: grid;
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { ScrollProgress } from "@/components/Scrolly";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,8 +48,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <head>
+        {/* Flags JS availability so reveal animations only hide content when they can run. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.add('js');`,
+          }}
+        />
+      </head>
+      <body className="flex min-h-full flex-col">
+        <ScrollProgress />
+        {children}
+      </body>
     </html>
   );
 }
