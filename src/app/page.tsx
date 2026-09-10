@@ -112,27 +112,13 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* Demo credentials — inset card */}
+              {/* Access note — no public credentials */}
               <div className="mt-6 border border-[var(--nhs-border-grey)] bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--nhs-mid-grey)]">Demo logins</span>
-                  <span className="bg-[var(--nhs-light-grey)] px-2.5 py-1 text-[11px] font-medium text-[var(--nhs-dark-grey)]">
-                    try any role
-                  </span>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {[
-                    { role: "Doctor", email: "doctor@portal.nhs.uk", pass: "Doctor123!" },
-                    { role: "Appraiser", email: "appraiser@portal.nhs.uk", pass: "Appraiser123!" },
-                    { role: "Admin / RO", email: "admin@portal.nhs.uk", pass: "Admin123!" },
-                  ].map((a) => (
-                    <div key={a.email} className="border border-[var(--nhs-border-grey)] bg-[var(--nhs-light-grey)] px-3 py-2.5">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--nhs-mid-grey)]">{a.role}</div>
-                      <div className="mt-1 font-mono text-[11px] font-medium leading-none text-[var(--nhs-black)]">{a.email}</div>
-                      <div className="font-mono text-[11px] leading-none text-[var(--nhs-dark-grey)]">{a.pass}</div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-[13px] leading-5 text-[var(--nhs-dark-grey)]">
+                  <span className="font-bold text-[var(--nhs-black)]">Access is by invitation of your designated body.</span> Registered
+                  accounts are approved by the Responsible Officer before sign-in. Ask your appraisal lead to arrange access, or{" "}
+                  <Link href="/register" className="font-semibold text-[var(--nhs-blue)] underline hover:no-underline">request an account</Link>.
+                </p>
               </div>
             </div>
 

@@ -95,7 +95,7 @@ export default function LoginForm() {
             </p>
           </div>
           <p className="mt-5 text-center text-xs leading-relaxed text-slate-400">
-            Demo: <code>doctor@portal.nhs.uk / Doctor123!</code> · <code>appraiser@portal.nhs.uk / Appraiser123!</code> · <code>admin@portal.nhs.uk / Admin123!</code>
+            Access is restricted to approved users of your designated body. New accounts require administrator approval before sign-in.
           </p>
         </div>
       </div>
