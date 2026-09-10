@@ -46,11 +46,16 @@ export default function Home() {
           <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
             {/* Left — wordmark + headline */}
             <div className="relative">
-              <div className="inline-flex items-center gap-2 border border-[var(--nhs-border-grey)] bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--nhs-dark-grey)]">
-                <span className="inline-flex h-5 items-center bg-[var(--nhs-blue)] px-2 text-[10px] font-bold tracking-[0.08em] text-white">
-                  MAG 2022
-                </span>
-                Model form · validated sections
+              <div className="flex flex-wrap gap-2">
+                <div className="inline-flex items-center gap-2 border border-[var(--nhs-border-grey)] bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--nhs-dark-grey)]">
+                  <span className="inline-flex h-5 items-center bg-[var(--nhs-blue)] px-2 text-[10px] font-bold tracking-[0.08em] text-white">
+                    MAG 2022
+                  </span>
+                  Model form · validated sections
+                </div>
+                <div className="inline-flex items-center gap-1.5 border border-[var(--nhs-blue)]/20 bg-[#e8f1fc] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--nhs-blue)]">
+                  <span aria-hidden>✦</span> Integrated AI — gated &amp; audited
+                </div>
               </div>
 
               <h1 className="font-display mt-5 text-balance text-[42px] font-normal leading-[0.96] tracking-[-0.03em] text-[var(--nhs-black)] sm:text-[54px] lg:text-[64px]">
@@ -60,12 +65,22 @@ export default function Home() {
                 <br />
                 admin drag.
               </h1>
+              <p className="mt-3 max-w-[52ch] text-[13px] font-bold uppercase tracking-[0.08em] text-[var(--nhs-blue)]">
+                Now with integrated AI — inside the workflow, not bolted on
+              </p>
 
-              <p className="mt-5 max-w-[52ch] text-pretty text-[16px] leading-6 text-[var(--nhs-dark-grey)]">
+              <p className="mt-3 max-w-[52ch] text-pretty text-[16px] leading-6 text-[var(--nhs-dark-grey)]">
                 One secure portal for the <em className="font-semibold not-italic text-[var(--nhs-black)]">whole scope</em>{" "}
                 — MAG form, 360° feedback, CPD &amp; PDP that carries forward year to year. Built for doctors, appraisers
                 and Responsible Officers, <span className="font-semibold text-[var(--nhs-black)]">audited end-to-end.</span>
               </p>
+              <div className="mt-4 flex flex-wrap gap-2 border-l-4 border-[var(--nhs-blue)] bg-[#e8f1fc] px-3 py-2.5">
+                <p className="text-[13px] font-medium leading-5 text-[var(--nhs-black)]">
+                  <span className="font-bold text-[var(--nhs-blue)]">AI drafts where you work:</span> CPD reflections, SMART PDP
+                  suggestions &amp; appraisal summaries — <span className="font-semibold">draft → human approval → audit log</span>.
+                  No patient-identifiable data leaves your trust.
+                </p>
+              </div>
 
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
