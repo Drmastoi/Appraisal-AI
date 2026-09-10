@@ -197,13 +197,15 @@ body {
   .border-nhs { border-color: var(--nhs-border-grey); }
 
   /* ── Scrollytelling ─────────────────────────────────────────── */
+  /* Editorial easing — long, soft deceleration — inlined per rule for
+     predictable parsing across toolchains. */
   /* No-JS fallback: initial hidden states only apply when JS is present. */
   html.js .reveal {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(24px);
     transition:
-      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: opacity, transform;
   }
   html.js .reveal[data-shown="true"] {
@@ -226,6 +228,8 @@ body {
     height: 100%;
     width: 0;
     background: var(--nhs-warm-yellow);
+    /* Smooth over throttled updates; short enough not to trail fast scrolls */
+    transition: width 0.1s linear;
   }
 
   /* Section rail (2xl screens) */
@@ -285,14 +289,33 @@ body {
     inset: 2rem;
     opacity: 0;
     transform: translateY(10px);
-    transition: opacity 0.45s ease, transform 0.45s ease;
+    /* Outgoing: quick, quiet fade so the stage empties before the next composes */
+    transition: opacity 0.35s ease, transform 0.35s ease;
     pointer-events: none;
   }
   .scrolly-panel[data-active="true"] {
     opacity: 1;
     transform: none;
     pointer-events: auto;
+    /* Incoming: slower, softer rise, held a beat behind the outgoing fade */
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
   }
+  /* Inner content composes in: numeral → title → body → dots */
+  .scrolly-panel .scrolly-el {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .scrolly-panel[data-active="true"] .scrolly-el {
+    opacity: 1;
+    transform: none;
+  }
+  .scrolly-panel[data-active="true"] .scrolly-el-1 { transition-delay: 0.16s; }
+  .scrolly-panel[data-active="true"] .scrolly-el-2 { transition-delay: 0.26s; }
+  .scrolly-panel[data-active="true"] .scrolly-el-3 { transition-delay: 0.36s; }
+  .scrolly-panel[data-active="true"] .scrolly-el-4 { transition-delay: 0.44s; }
   /* Reserve height so the absolute panels have a visible card behind them */
   .scrolly-stage > div {
     min-height: 240px;
@@ -315,6 +338,11 @@ body {
     }
     .scrolly-panel[data-active="true"] {
       display: grid;
+    }
+    .scrolly-panel .scrolly-el {
+      opacity: 1;
+      transform: none;
+      transition: none;
     }
   }
 }

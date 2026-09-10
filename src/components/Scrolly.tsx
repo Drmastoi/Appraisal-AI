@@ -161,27 +161,27 @@ export function ScrollySteps({ steps }: { steps: Step[] }) {
   }, [steps.length]);
 
   return (
-    <div ref={wrapRef} className="scrolly-steps lg:h-[280vh]">
+    <div ref={wrapRef} className="scrolly-steps lg:h-[320vh]">
       {/* Pinned stage — desktop */}
       <div className="scrolly-stage hidden lg:block">
         <div className="relative border border-[var(--nhs-border-grey)] bg-white p-8 shadow-sm">
           {steps.map((s, i) => (
             <div key={s.n} data-active={i === idx} className="scrolly-panel grid grid-cols-[96px_1fr] gap-6">
               <div
-                className={`font-display text-[64px] leading-none tracking-[-0.04em] transition-colors duration-500 ${
+                className={`scrolly-el scrolly-el-1 font-display text-[64px] leading-none tracking-[-0.04em] transition-colors duration-700 ${
                   i === idx ? "text-[var(--nhs-blue)]" : "text-[var(--nhs-blue)]/20"
                 }`}
               >
                 {s.n}
               </div>
               <div>
-                <h3 className="text-[20px] font-bold tracking-tight text-[var(--nhs-black)]">{s.title}</h3>
-                <p className="mt-3 max-w-[52ch] text-[15px] leading-7 text-[var(--nhs-dark-grey)]">{s.body}</p>
-                <div className="mt-6 flex gap-1.5" aria-hidden>
+                <h3 className="scrolly-el scrolly-el-2 text-[20px] font-bold tracking-tight text-[var(--nhs-black)]">{s.title}</h3>
+                <p className="scrolly-el scrolly-el-3 mt-3 max-w-[52ch] text-[15px] leading-7 text-[var(--nhs-dark-grey)]">{s.body}</p>
+                <div className="scrolly-el scrolly-el-4 mt-6 flex gap-1.5" aria-hidden>
                   {steps.map((_, d) => (
                     <span
                       key={d}
-                      className={`h-1 w-8 transition-colors duration-300 ${d === idx ? "bg-[var(--nhs-blue)]" : "bg-[var(--nhs-border-grey)]"}`}
+                      className={`h-1 w-8 transition-colors duration-500 ${d === idx ? "bg-[var(--nhs-blue)]" : "bg-[var(--nhs-border-grey)]"}`}
                     />
                   ))}
                 </div>

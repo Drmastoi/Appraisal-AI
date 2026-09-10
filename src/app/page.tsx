@@ -246,8 +246,9 @@ export default function Home() {
 
         {/* ── Features — staggered bento ── */}
         <section id="features" className="mx-auto max-w-[1280px] px-6 pt-10 lg:px-8">
-          <Reveal className="grid gap-4 lg:grid-cols-12">
-            <div className="border border-[var(--nhs-border-grey)] bg-white p-7 lg:col-span-7">
+          <div className="grid gap-4 lg:grid-cols-12">
+            <Reveal className="lg:col-span-7">
+            <div className="h-full border border-[var(--nhs-border-grey)] bg-white p-7">
               <div className="inline-flex items-center gap-2 bg-[var(--nhs-light-grey)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--nhs-dark-grey)]">
                 MAG 2022
               </div>
@@ -267,12 +268,12 @@ export default function Home() {
                       className="border border-[var(--nhs-border-grey)] bg-[var(--nhs-light-grey)] px-3 py-2 text-center text-xs font-semibold text-[var(--nhs-dark-grey)]"
                     >
                       {t}
-                    </span>
-                  )
-                )}
+                    </span>                ))}
               </div>
             </div>
-            <div className="border border-[var(--nhs-dark-blue)] bg-[var(--nhs-blue)] p-7 text-white lg:col-span-5">
+            </Reveal>
+            <Reveal delay={90} className="lg:col-span-5">
+            <div className="h-full border border-[var(--nhs-dark-blue)] bg-[var(--nhs-blue)] p-7 text-white">
               <div className="inline-flex bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-white">
                 360° feedback
               </div>
@@ -287,8 +288,10 @@ export default function Home() {
                 <span className="border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white">Reflection</span>
               </div>
             </div>
+            </Reveal>
 
-            <div className="border border-[var(--nhs-border-grey)] bg-[#e8f1fc] p-7 lg:col-span-5">
+            <Reveal delay={180} className="lg:col-span-5">
+            <div className="h-full border border-[var(--nhs-border-grey)] bg-[#e8f1fc] p-7">
               <h3 className="font-display text-[22px] leading-none tracking-tight text-[var(--nhs-black)]">PDP that carries forward</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--nhs-dark-grey)]">
                 Signed-off objectives seed next year&apos;s appraisal. Achieved / not-achieved review is required before
@@ -299,7 +302,9 @@ export default function Home() {
                 Year 2024 → 2025 → 2026 continuity
               </div>
             </div>
-            <div className="border border-[var(--nhs-border-grey)] bg-white p-7 lg:col-span-7">
+            </Reveal>
+            <Reveal delay={270} className="lg:col-span-7">
+            <div className="h-full border border-[var(--nhs-border-grey)] bg-white p-7">
               <h3 className="font-display text-[22px] leading-none tracking-tight text-[var(--nhs-black)]">
                 Appraiser workflow, with receipts
               </h3>
@@ -317,8 +322,10 @@ export default function Home() {
                 </span>
               </div>
             </div>
+            </Reveal>
 
-            <div className="border-2 border-[var(--nhs-blue)] bg-[var(--nhs-blue)] p-7 text-white lg:col-span-12">
+            <Reveal delay={360} className="lg:col-span-12">
+            <div className="h-full border-2 border-[var(--nhs-blue)] bg-[var(--nhs-blue)] p-7 text-white">
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div>
                   <div className="inline-flex bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-white">
@@ -334,7 +341,8 @@ export default function Home() {
                 </p>
               </div>
             </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </section>
 
         {/* ── Comparison — minimal, compact matrix (NHS + SEO) ── */}
