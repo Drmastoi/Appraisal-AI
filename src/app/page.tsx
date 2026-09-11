@@ -1,5 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { HeroScrub, Reveal, ScrollySteps } from "@/components/Scrolly";
+import { absoluteUrl, pageOpenGraph } from "@/lib/site";
+
+/** The homepage is the primary indexable surface for this portal. */
+export const metadata: Metadata = {
+  alternates: { canonical: absoluteUrl("/") },
+  openGraph: pageOpenGraph("/"),
+};
 
 export default function Home() {
   return (

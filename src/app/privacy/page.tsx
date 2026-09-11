@@ -1,4 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { absoluteUrl, pageOpenGraph } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Privacy at a glance — AppraisalPortal UK",
+  description:
+    "How AppraisalPortal UK handles appraisal data: UK GDPR basis, UK data residency, AI draft-only processing and the audit trail.",
+  alternates: { canonical: absoluteUrl("/privacy") },
+  openGraph: pageOpenGraph("/privacy"),
+};
 
 export default function PrivacyPage() {
   return (

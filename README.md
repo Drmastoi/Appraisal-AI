@@ -47,7 +47,7 @@ dev server answers:
 npm run doctor                     # everything (expects the dev server on 4321)
 npm run doctor -- --no-server      # before starting the server
 npm run doctor -- --port 3000      # non-default port
-npm run doctor -- --url https://appraisal-v2.vercel.app   # check a deployed site
+npm run doctor -- --url https://doctorappraisal.co.uk   # check a deployed site
 npm run doctor -- --json           # machine-readable
 ```
 
