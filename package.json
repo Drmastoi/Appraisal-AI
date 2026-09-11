@@ -10,11 +10,12 @@
   "typecheck": "tsc --noEmit",
   "test": "vitest run",
   "test:watch": "vitest",
-  "test:e2e": "vitest run tests/e2e-lifecycle.test.ts",
-  "db:migrate": "prisma migrate deploy",
-  "db:push": "prisma db push",
-  "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
-  "db:studio": "prisma studio"
+  "test:e2e": "vitest run tests/e2e-lifecycle.test.ts",    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "dev:db": "node scripts/dev-postgres.mjs",
+    "doctor": "node scripts/doctor.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

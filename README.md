@@ -25,22 +25,40 @@ Sign-off marks the PDP *agreed* → a new next-year appraisal is seeded automati
 
 ```bash
 npm install
+export DATABASE_URL="postgresql://…"   # or cp .env.example .env and edit
 cp .env.example .env
-npx prisma db push
-npm run db:seed
+npx prisma migrate deploy
+SEED_ADMIN_EMAIL=admin@yourdomain.nhs.uk SEED_ADMIN_PASSWORD='<strong-password>' npm run db:seed
 npm run dev            # http://localhost:4321
 ```
 
-Demo accounts: `admin@portal.nhs.uk / Admin123!` · `appraiser@portal.nhs.uk / Appraiser123!` · `doctor@portal.nhs.uk / Doctor123!`
+There are no demo accounts. The seed creates (or resets) the single bootstrap **admin** from
+`SEED_ADMIN_*` env vars — nothing is hardcoded, and re-running it rotates that admin's password.
+Doctors and appraisers register at `/register` and are approved by the admin under **Admin → Users**
+before they can sign in.
 
-The seed also creates the doctor's current-year appraisal **already SUBMITTED** with realistic content (scope of work, CPD, QI, PDP, declarations) plus a **closed 360° colleague feedback cycle with 15 responses** — log in as the appraiser to review it immediately, or as the doctor to view the unblinded feedback report. Rerunning the seed is safe: it only promotes a DRAFT appraisal and only fills sections/entries/cycles that are empty.
+## Health check
+
+One command reports whether this checkout is actually usable — tooling, env vars, Postgres
+reachability, Prisma connectivity, pending/failed migrations, the bootstrap admin, and whether the
+dev server answers:
+
+```bash
+npm run doctor                     # everything (expects the dev server on 4321)
+npm run doctor -- --no-server      # before starting the server
+npm run doctor -- --port 3000      # non-default port
+npm run doctor -- --url https://appraisal-v2.vercel.app   # check a deployed site
+npm run doctor -- --json           # machine-readable
+```
+
+It is read-only (never migrates, seeds or writes), prints the exact fix command for every failure,
+and exits non-zero when unhealthy — so it works as a pre-flight gate in scripts and CI.
 
 ## Quality gates
 
 ```bash
 npm run typecheck && npm run lint && npm test
 ```
-
 27 tests: auth/tokens, 360 feedback aggregation & thresholds, MAG submission gating, AI provider outputs, and a full **lifecycle E2E** (assign → complete → submit → feedback → review → sign-off → PDP carry-forward → PDF export).
 
 ## AI provider configuration
