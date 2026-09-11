@@ -165,6 +165,21 @@ export function emptySectionData(sectionKey: string): Record<string, unknown> {
   return schema ? (schema.parse({}) as Record<string, unknown>) : {};
 }
 
+/**
+ * True when any meaningful value has been entered in a section payload.
+ * Strings count when non-blank, booleans when true, arrays when non-empty —
+ * everything else (numbers, null, nested objects) is ignored so that UI
+ * defaults never mark a section complete on their own.
+ */
+export function isSectionMeaningful(data: Record<string, unknown>): boolean {
+  return Object.values(data).some((v) => {
+    if (typeof v === "string") return v.trim() !== "";
+    if (typeof v === "boolean") return v === true;
+    if (Array.isArray(v)) return v.length > 0;
+    return false;
+  });
+}
+
 // A section counts as started when any meaningful value has been entered.
 export function computeSectionStatuses(
   sections: { sectionKey: string; data: string }[],
@@ -179,14 +194,7 @@ export function computeSectionStatuses(
       out[section.key] = false;
       continue;
     }
-    const data = parseSectionData(section.key, raw);
-    const values = Object.values(data).filter((v) => {
-      if (typeof v === "string") return v.trim() !== "";
-      if (typeof v === "boolean") return v === true;
-      if (Array.isArray(v)) return v.length > 0;
-      return false;
-    });
-    out[section.key] = values.length > 0;
+    out[section.key] = isSectionMeaningful(parseSectionData(section.key, raw));
   }
 
   out.cpd = counts.cpd > 0;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MAG_SECTIONS } from "@/lib/appraisal";
 import { GMP_DOMAINS, GMP_THEMES_2024, parseSectionData } from "@/lib/sections";
@@ -111,11 +111,10 @@ export default function ReviewWorkspace(props: {
                   {isAppraiserSection && section.key !== "appraiser_summary" && inReview && (
                     <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-3">
                       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-800">{section.shortTitle} — appraiser to complete</h4>
-                      <SectionEditor
+                      <TrackedSectionEditor
                         sectionKey={section.key}
                         initial={parseSectionData(section.key, props.sections.find((s) => s.sectionKey === section.key)?.data ?? "{}")}
                         doctorName={props.doctorName}
-                        gmcNumber=""
                         onSave={async (data) => action(`/api/appraiser/appraisals/${props.appraisalId}/sections/${section.key}`, { data }, "PUT")}
                       />
                     </div>
@@ -125,11 +124,10 @@ export default function ReviewWorkspace(props: {
                     <details className="rounded-xl border border-slate-200 px-4 py-2">
                       <summary className="cursor-pointer text-sm font-medium text-slate-600">Edit section (tracked — recorded in version history)</summary>
                       <div className="pt-3">
-                        <SectionEditor
+                        <TrackedSectionEditor
                           sectionKey={section.key}
                           initial={parseSectionData(section.key, props.sections.find((s) => s.sectionKey === section.key)?.data ?? "{}")}
                           doctorName={props.doctorName}
-                          gmcNumber=""
                           onSave={async (data) => action(`/api/appraiser/appraisals/${props.appraisalId}/sections/${section.key}`, { data }, "PUT")}
                         />
                       </div>
@@ -310,6 +308,53 @@ function CommentThread({ appraisalId, sectionKey, comments, currentUserId, disab
       )}
     </div>
   );
+}
+
+/**
+ * Appraiser-side section editor. Tracked edits are debounced (700ms) and the
+ * pending write is always flushed on unmount, so closing the section or
+ * navigating away never drops the reviewer's typing.
+ */
+function TrackedSectionEditor({
+  sectionKey,
+  initial,
+  doctorName,
+  onSave,
+}: {
+  sectionKey: string;
+  initial: Record<string, unknown>;
+  doctorName: string;
+  onSave: (data: Record<string, unknown>) => Promise<unknown>;
+}) {
+  const [data, setData] = useState(initial);
+  const latest = useRef(initial);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef(onSave);
+
+  useEffect(() => {
+    saveRef.current = onSave;
+  }, [onSave]);
+
+  function change(next: Record<string, unknown>) {
+    latest.current = next;
+    setData(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void saveRef.current(latest.current);
+    }, 700);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        void saveRef.current(latest.current);
+      }
+    };
+  }, []);
+
+  return <SectionEditor sectionKey={sectionKey} data={data} doctorName={doctorName} gmcNumber="" onChange={change} />;
 }
 
 function AppraiserSummaryEditor({ appraisalId, initial }: { appraisalId: string; initial: Record<string, unknown> }) {

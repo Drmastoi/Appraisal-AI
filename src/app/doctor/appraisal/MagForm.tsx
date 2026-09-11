@@ -3,33 +3,13 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MAG_SECTIONS } from "@/lib/appraisal";
-import { parseSectionData } from "@/lib/sections";
+import { computeSectionStatuses, parseSectionData } from "@/lib/sections";
+import { sectionStatusLabel, useSectionAutosave } from "@/app/doctor/appraisal/useSectionAutosave";
 
 type Counts = { cpd: number; qi: number; events: number; pdp: number; colleagueCycles: number; patientCycles: number };
 
-function computeStatuses(list: { sectionKey: string; data: string }[], c: Counts): Record<string, boolean> {
-  const out: Record<string, boolean> = {};
-  for (const section of MAG_SECTIONS) {
-    const data = parseSectionData(section.key, list.find((x) => x.sectionKey === section.key)?.data ?? "{}");
-    const meaningful = Object.values(data).some((v) => {
-      if (typeof v === "string") return v.trim() !== "";
-      if (typeof v === "boolean") return v === true;
-      if (Array.isArray(v)) return v.length > 0;
-      return false;
-    });
-    out[section.key] = meaningful;
-  }
-  out.cpd = c.cpd > 0;
-  out.quality_improvement = c.qi > 0;
-  out.significant_events = c.events > 0;
-  out.colleague_feedback = c.colleagueCycles > 0;
-  out.patient_feedback = c.patientCycles > 0;
-  out.pdp_review = c.pdp > 0;
-  out.new_pdp = c.pdp > 0;
-  return out;
-}
-
 export default function MagForm({
+  appraisalId,
   status,
   doctorName,
   gmcNumber,
@@ -45,35 +25,55 @@ export default function MagForm({
 }) {
   const router = useRouter();
   const [openKey, setOpenKey] = useState<string | null>("doctor_details");
-  const [statuses, setStatuses] = useState<Record<string, boolean>>(() => computeStatuses(sections, counts));
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const locked = status !== "DRAFT";
 
-  const dataMap = useMemo(() => {
-    const m = new Map<string, Record<string, unknown>>();
-    for (const s of MAG_SECTIONS) m.set(s.key, parseSectionData(s.key, sections.find((x) => x.sectionKey === s.key)?.data ?? "{}"));
+  // Server content, parsed — the baseline for both the form and draft recovery.
+  const serverData = useMemo(() => {
+    const m: Record<string, Record<string, unknown>> = {};
+    for (const section of MAG_SECTIONS) {
+      m[section.key] = parseSectionData(section.key, sections.find((x) => x.sectionKey === section.key)?.data ?? "{}");
+    }
     return m;
   }, [sections]);
 
-  async function saveSection(key: string, data: Record<string, unknown>) {
-    setSaveState("saving");
-    const res = await fetch(`/api/appraisal/sections/${key}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data }) });
-    if (res.ok) {
-      setSaveState("saved");
-      setStatuses((s) => ({ ...s, [key]: Object.values(data).some((v) => (typeof v === "string" ? v.trim() !== "" : typeof v === "boolean" ? v === true : Array.isArray(v) ? v.length > 0 : false)) }));
-      setTimeout(() => setSaveState("idle"), 1500);
-      return true;
-    }
-    setSaveState("error");
-    return false;
+  // Autosave owns the form's live content: typing is held in memory, written
+  // debounced, flushed on blur/close/hide/unload and retried with backoff.
+  const { data: formData, sync, counts: saveCounts, restoredSections, epoch, update, flush, flushAll, saveNow, discardDraft } =
+    useSectionAutosave({ appraisalId, serverData, enabled: !locked });
+
+  // Completion ticks follow the live content, so they update as the doctor types.
+  const statuses = useMemo(
+    () =>
+      computeSectionStatuses(
+        MAG_SECTIONS.map((section) => ({ sectionKey: section.key, data: JSON.stringify(formData[section.key] ?? {}) })),
+        counts
+      ),
+    [formData, counts]
+  );
+
+  const sectionTitle = (key: string) => MAG_SECTIONS.find((s) => s.key === key)?.title ?? key;
+  const savedTime = saveCounts.lastSavedAt ? new Date(saveCounts.lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
+
+  function toggleSection(key: string) {
+    const isOpen = openKey === key;
+    // Closing a section must never discard what was typed in it.
+    if (isOpen && !locked) void flush(key);
+    setOpenKey(isOpen ? null : key);
   }
 
   async function submit() {
     setBusy(true);
     setSubmitError(null);
+    // Never submit stale content: persist every outstanding section first.
+    const saved = await flushAll();
+    if (!saved) {
+      setBusy(false);
+      setSubmitError("Some sections could not be saved. Check your connection — your answers are kept, and saving will retry.");
+      return;
+    }
     const res = await fetch("/api/appraisal/submit", { method: "POST" });
     const data = await res.json();
     setBusy(false);
@@ -88,18 +88,51 @@ export default function MagForm({
   return (
     <div>
       <div className="card mb-4 space-y-3 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-slate-600">
-            {saveState === "saving" && <span className="text-slate-400">Saving…</span>}
-            {saveState === "saved" && <span className="text-green-700">All changes saved</span>}
-            {saveState === "error" && <span className="text-red-700">Save failed — check your connection and retry</span>}
-            {saveState === "idle" && <span>Complete each section — entries save automatically</span>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-slate-600" aria-live="polite">
+            {saveCounts.saving > 0 && <span className="text-slate-400">Saving…</span>}
+            {saveCounts.saving === 0 && saveCounts.failed > 0 && (
+              <span className="text-red-700">
+                {saveCounts.failed} section{saveCounts.failed === 1 ? "" : "s"} not saved — retrying automatically. Your answers are kept.
+              </span>
+            )}
+            {saveCounts.saving === 0 && saveCounts.failed === 0 && saveCounts.unsaved > 0 && (
+              <span className="text-amber-700">
+                {saveCounts.unsaved} section{saveCounts.unsaved === 1 ? "" : "s"} with unsaved changes — saving as you type
+              </span>
+            )}
+            {saveCounts.saving === 0 && saveCounts.unsaved === 0 && (
+              <span className="text-emerald-700">
+                {savedTime ? `All changes saved · ${savedTime}` : "Complete each section — your answers save automatically"}
+              </span>
+            )}
           </div>
-          {!locked && (
-            <button onClick={submit} disabled={busy} className="btn-primary">{busy ? "Submitting…" : "Submit to appraiser"}</button>
-          )}
+          <div className="flex items-center gap-2">
+            {!locked && (
+              <button onClick={saveNow} className="btn-secondary" title="Save now (⌘S / Ctrl+S)">Save now</button>
+            )}
+            {!locked && (
+              <button onClick={submit} disabled={busy} className="btn-primary">{busy ? "Submitting…" : "Submit to appraiser"}</button>
+            )}
+          </div>
         </div>
       </div>
+
+      {restoredSections.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Unsaved answers were recovered from this device</p>
+          <p className="mt-1">
+            {restoredSections.map(sectionTitle).join(", ")} — these had not reached the server when this page was last closed. Review and
+            save them, or discard to return to the stored version.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button className="btn-secondary" onClick={saveNow}>Save recovered answers</button>
+            <button className="text-xs font-semibold text-amber-900 underline" onClick={() => restoredSections.forEach(discardDraft)}>
+              Discard them
+            </button>
+          </div>
+        </div>
+      )}
       {submitError && <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</div>}
 
       <div className="space-y-2">
@@ -107,10 +140,12 @@ export default function MagForm({
           const isOpen = openKey === section.key;
           const done = statuses[section.key];
           const isAppraiserSection = section.owner === "APPRAISER";
+          const label = locked ? null : sectionStatusLabel(sync[section.key]);
+          const dirty = !locked && (sync[section.key]?.state === "pending" || sync[section.key]?.state === "error");
           return (
-            <div key={section.key} className="card overflow-hidden">
+            <div key={section.key} className="card overflow-hidden" onBlur={() => !locked && void flush(section.key)}>
               <button
-                onClick={() => setOpenKey(isOpen ? null : section.key)}
+                onClick={() => toggleSection(section.key)}
                 className="flex w-full items-center justify-between rounded-2xl px-5 py-4 text-left transition-all hover:bg-slate-50/80"
               >
                 <div className="flex items-center gap-3">
@@ -122,7 +157,10 @@ export default function MagForm({
                     {isAppraiserSection && <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-inset ring-violet-200">APPRAISER</span>}
                   </div>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
+                <span className="flex shrink-0 items-center gap-3">
+                  {label && <span className={`whitespace-nowrap text-[11px] font-semibold ${label.tone}`}>{label.text}</span>}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${dirty ? "text-amber-500" : "text-slate-400"}`}><path d="m6 9 6 6 6-6" /></svg>
+                </span>
               </button>
               {isOpen && (
                 <div className="border-t border-slate-100 px-5 py-4">
@@ -132,14 +170,15 @@ export default function MagForm({
                       This section is completed by your appraiser during review{locked && status === "SIGNED_OFF" ? " — see the signed-off summary" : ""}.
                     </p>
                   ) : locked ? (
-                    <SectionView data={dataMap.get(section.key) ?? {}} />
+                    <SectionView data={formData[section.key] ?? {}} />
                   ) : (
                     <SectionEditor
+                      key={`${section.key}:${epoch}`}
                       sectionKey={section.key}
-                      initial={dataMap.get(section.key) ?? {}}
+                      data={formData[section.key] ?? {}}
                       doctorName={doctorName}
                       gmcNumber={gmcNumber}
-                      onSave={(data) => saveSection(section.key, data)}
+                      onChange={(next) => update(section.key, next)}
                     />
                   )}
                   {(section.key === "cpd" || section.key === "colleague_feedback" || section.key === "patient_feedback" || section.key === "pdp_review" || section.key === "new_pdp" || section.key === "quality_improvement" || section.key === "significant_events") && (
@@ -168,28 +207,26 @@ function Field({ label, children, wide }: { label: string; children: React.React
 
 const inputCls = "field";
 
+/**
+ * Renders one MAG section. It is deliberately stateless: the parent owns the
+ * live content (so a half-typed answer survives closing or reopening the
+ * section) and schedules the debounced autosave.
+ */
 export function SectionEditor({
   sectionKey,
-  initial,
+  data,
   doctorName,
   gmcNumber,
-  onSave,
+  onChange,
 }: {
   sectionKey: string;
-  initial: Record<string, unknown>;
+  data: Record<string, unknown>;
   doctorName: string;
   gmcNumber: string;
-  onSave: (data: Record<string, unknown>) => Promise<boolean>;
+  onChange: (data: Record<string, unknown>) => void;
 }) {
-  const [data, setData] = useState<Record<string, unknown>>(initial);
-  const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-
-  function update(key: string, value: unknown) {
-    const next = { ...data, [key]: value };
-    setData(next);
-    if (timer) clearTimeout(timer);
-    const t = setTimeout(() => onSave(next), 700);
-    setTimer(t);
+  function update(key: string, next: unknown) {
+    onChange({ ...data, [key]: next });
   }
 
   function replaceRow(key: string, rows: Record<string, string>[], index: number, patch: Partial<Record<string, string>>) {
@@ -204,7 +241,7 @@ export function SectionEditor({
   }
 
   if (sectionKey === "doctor_details") {
-    const d = initial as { fullName?: string; gmcNumber?: string; qualifications?: string; contactEmail?: string; contactPhone?: string };
+    const d = data as { fullName?: string; gmcNumber?: string; qualifications?: string; contactEmail?: string; contactPhone?: string };
     return (
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name">

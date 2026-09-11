@@ -8,7 +8,9 @@ import { DEFAULT_SECTIONS } from "@/lib/appraisal";
 
 const bodySchema = z.object({ data: z.record(z.string(), z.unknown()) });
 
-export async function PUT(req: Request, { params }: { params: Promise<{ key: string }> }) {
+type Ctx = { params: Promise<{ key: string }> };
+
+async function saveSection(req: Request, { params }: Ctx) {
   return handleApi(async () => {
     const user = await requireRole("DOCTOR");
     const { key } = await params;
@@ -29,4 +31,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ key: str
     await audit({ actorId: user.id, actorRole: user.role, action: "SECTION_SAVE", entityType: "AppraisalSection", entityId: `${appraisal.id}:${key}` });
     return NextResponse.json({ ok: true, savedAt: new Date().toISOString() });
   });
+}
+
+/** Autosave while the doctor types. */
+export async function PUT(req: Request, ctx: Ctx) {
+  return saveSection(req, ctx);
+}
+
+/**
+ * Same save, reached as POST so an unload/close flush can use
+ * `navigator.sendBeacon`, which only issues POST requests.
+ */
+export async function POST(req: Request, ctx: Ctx) {
+  return saveSection(req, ctx);
 }
